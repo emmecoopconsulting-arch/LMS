@@ -55,8 +55,8 @@ docker compose up -d --build
 
 Da UI (`Impostazioni`) o via env:
 
-- `FACTORIAL_BASE_URL`
-- `FACTORIAL_API_TOKEN`
+- `FACTORIAL_BASE_URL` (esempio: `https://api.factorialhr.com`)
+- `FACTORIAL_API_TOKEN` (usato come `x-api-key`)
 - `FACTORIAL_COMPANY_ID` (opzionale)
 
 Operazioni:
@@ -70,6 +70,11 @@ Regole sync:
 - Dipendente esistente -> aggiornato
 - Terminated/inactive -> marcato inattivo (non cancellato)
 - Se Factorial non raggiungibile -> app continua a usare dati locali
+
+Note implementazione API:
+- Endpoint usato: `/api/2026-01-01/resources/employees/employees`
+- Header auth: `x-api-key: <FACTORIAL_API_TOKEN>`
+- Paginazione cursor (`meta.has_next_page`, `meta.end_cursor`) gestita automaticamente
 
 ## Deploy in Portainer
 

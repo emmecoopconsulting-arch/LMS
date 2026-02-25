@@ -1,9 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="mb-4">Dashboard</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h2 class="page-title mb-1">Dashboard scadenze</h2>
+    <p class="page-subtitle mb-0">Panoramica certificati scaduti e in scadenza.</p>
+  </div>
+  <a href="/certifications" class="btn btn-primary">Apri elenco certificazioni</a>
+</div>
+
 <div class="row g-3 mb-4">
-  <div class="col-md-6"><div class="card border-danger"><div class="card-body"><h5>Scaduti</h5><p class="display-6 text-danger">{{ expired }}</p></div></div></div>
-  <div class="col-md-6"><div class="card border-warning"><div class="card-body"><h5>In scadenza (30gg)</h5><p class="display-6 text-warning">{{ expiring }}</p></div></div></div>
+  <div class="col-md-6">
+    <div class="card kpi border-danger-subtle">
+      <div class="kpi-label">Certificati Scaduti</div>
+      <div class="kpi-value text-danger">{{ expired }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card kpi border-warning-subtle">
+      <div class="kpi-label">In Scadenza Entro 30 Giorni</div>
+      <div class="kpi-value text-warning">{{ expiring }}</div>
+    </div>
+  </div>
 </div>
 
 {% for days, items in upcoming %}
@@ -11,8 +28,11 @@
   <div class="card-header">In scadenza nei prossimi {{ days }} giorni</div>
   <div class="table-responsive">
     <table class="table table-sm mb-0">
-      <thead><tr><th>Dipendente</th><th>Titolo</th><th>Tipo</th><th>Scadenza</th><th>Stato</th></tr></thead>
+      <thead><tr><th>Dipendente</th><th>Certificazione</th><th>Tipo</th><th>Scadenza</th><th>Stato</th></tr></thead>
       <tbody>
+        {% if items|length == 0 %}
+        <tr><td colspan="5" class="text-center text-muted py-3">Nessuna certificazione in questa finestra temporale.</td></tr>
+        {% endif %}
         {% for c in items %}
         {% set st = status_for_expiry(c.expiry_date) %}
         <tr>
@@ -21,8 +41,8 @@
           <td>{{ c.cert_type }}</td>
           <td>{{ c.expiry_date }}</td>
           <td>
-            <span class="badge {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">
-              {{ st }}
+            <span class="badge badge-status {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+              {% if st == 'expired' %}Scaduto{% elif st == 'expiring' %}In scadenza{% else %}Valido{% endif %}
             </span>
           </td>
         </tr>

@@ -1,8 +1,127 @@
+:root {
+  --app-bg-1: #f4f6fa;
+  --app-bg-2: #e8eef7;
+  --app-navy: #1f2a44;
+  --app-accent: #2276ff;
+  --app-muted: #6f7a8d;
+  --app-card: #ffffff;
+}
+
 body {
-  background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
+  font-family: 'Manrope', sans-serif;
+  background: radial-gradient(circle at 0 0, var(--app-bg-2), var(--app-bg-1) 45%, #eef3f9 100%);
+  color: #1a2233;
+}
+
+.app-navbar {
+  background: linear-gradient(90deg, #1f2a44, #273657);
+  box-shadow: 0 10px 30px rgba(21, 33, 62, 0.35);
+}
+
+.navbar-brand,
+.nav-link,
+.navbar-toggler {
+  color: #eef3ff !important;
+}
+
+.nav-link {
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem !important;
+  margin-right: 0.2rem;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.user-chip {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #f4f8ff;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.86rem;
+}
+
+.page-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  color: var(--app-muted);
 }
 
 .card {
-  border: none;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e6ebf4;
+  background: var(--app-card);
+  box-shadow: 0 8px 24px rgba(20, 37, 72, 0.06);
+  border-radius: 16px;
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid #edf1f8;
+  font-weight: 700;
+}
+
+.soft-panel {
+  background: #f9fbff;
+  border: 1px solid #e5ecf7;
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.kpi {
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+}
+
+.kpi-label {
+  color: var(--app-muted);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-top: 0.2rem;
+  line-height: 1;
+}
+
+.badge-status {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.table thead th {
+  background: #f8fafd;
+  color: #5f6c83;
+  border-bottom-width: 1px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+a {
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .kpi-value {
+    font-size: 1.65rem;
+  }
+
+  .user-chip-wrap {
+    margin-top: 0.75rem;
+  }
 }

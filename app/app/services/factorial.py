@@ -20,9 +20,9 @@ def _resolve_config(db: Session) -> tuple[str, str, str]:
 def _extract_employee(raw: dict) -> dict:
     first_name = raw.get("first_name") or raw.get("name") or ""
     last_name = raw.get("last_name") or raw.get("surname") or ""
-    active = not bool(raw.get("terminated_at") or raw.get("inactive") or raw.get("terminated"))
-    office = raw.get("office") or raw.get("location") or ""
-    cost_center = raw.get("cost_center") or raw.get("department") or ""
+    active = bool(raw.get("active")) and not bool(raw.get("terminated_on") or raw.get("is_terminating"))
+    office = raw.get("location") or raw.get("location_id") or ""
+    cost_center = raw.get("cost_center") or raw.get("department") or raw.get("legal_entity_id") or ""
     return {
         "factorial_employee_id": str(raw.get("id")),
         "first_name": first_name or "N/A",
@@ -39,16 +39,45 @@ def sync_factorial_employees(db: Session) -> dict:
     if not base_url or not token:
         return {"ok": False, "message": "Factorial config missing", "created": 0, "updated": 0}
 
-    url = f"{base_url.rstrip('/')}/employees"
-    params = {}
+    base = base_url.rstrip("/")
+    if "/api/" in base and "/resources/employees/employees" in base:
+        url = base
+    else:
+        url = f"{base}/api/2026-01-01/resources/employees/employees"
+    params = {"only_active": "false"}
     if company_id:
         params["company_id"] = company_id
 
     try:
         with httpx.Client(timeout=30.0) as client:
-            resp = client.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
-            resp.raise_for_status()
-            payload = resp.json()
+            items: list[dict] = []
+            cursor: str | None = None
+
+            while True:
+                req_params = dict(params)
+                if cursor:
+                    req_params["cursor"] = cursor
+
+                resp = client.get(
+                    url,
+                    params=req_params,
+                    headers={
+                        "x-api-key": token,
+                        "accept": "application/json",
+                    },
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+                page_items = payload.get("data") if isinstance(payload, dict) else []
+                if isinstance(page_items, list):
+                    items.extend(page_items)
+
+                meta = payload.get("meta", {}) if isinstance(payload, dict) else {}
+                if not meta.get("has_next_page"):
+                    break
+                cursor = meta.get("end_cursor")
+                if not cursor:
+                    break
     except Exception as exc:
         logger.exception("Factorial sync failed")
         return {
@@ -57,8 +86,6 @@ def sync_factorial_employees(db: Session) -> dict:
             "created": 0,
             "updated": 0,
         }
-
-    items = payload.get("data") if isinstance(payload, dict) else payload
     if not isinstance(items, list):
         return {"ok": False, "message": "Unexpected Factorial payload", "created": 0, "updated": 0}
 

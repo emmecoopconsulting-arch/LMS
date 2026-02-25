@@ -1,42 +1,57 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
   <div>
-    <h2>{{ employee.first_name }} {{ employee.last_name }}</h2>
-    <p class="text-muted mb-0">Sede: {{ employee.location or '-' }} | Stato: {% if employee.is_active %}Attivo{% else %}Inattivo{% endif %}</p>
+    <h2 class="page-title mb-1">{{ employee.first_name }} {{ employee.last_name }}</h2>
+    <p class="page-subtitle mb-0">
+      Sede: <strong>{{ employee.location or '-' }}</strong> ·
+      Centro costo: <strong>{{ employee.cost_center or '-' }}</strong> ·
+      Stato: {% if employee.is_active %}<span class="badge bg-success badge-status">Attivo</span>{% else %}<span class="badge bg-secondary badge-status">Inattivo</span>{% endif %}
+    </p>
   </div>
+  <a href="/employees" class="btn btn-light border">Torna all'elenco</a>
 </div>
 
 <div class="card mb-4">
-  <div class="card-header">Certificazioni</div>
+  <div class="card-header">Certificazioni del dipendente</div>
   <div class="table-responsive">
     <table class="table mb-0 align-middle">
-      <thead><tr><th>Titolo</th><th>Tipo</th><th>Scadenza</th><th>Stato</th><th>Allegati</th><th></th></tr></thead>
+      <thead><tr><th>Certificazione</th><th>Tipo</th><th>Scadenza</th><th>Stato</th><th>Allegati</th><th>Azioni</th></tr></thead>
       <tbody>
+      {% if certifications|length == 0 %}
+      <tr><td colspan="6" class="text-center text-muted py-3">Nessuna certificazione presente.</td></tr>
+      {% endif %}
       {% for c in certifications %}
       {% set st = status_for_expiry(c.expiry_date) %}
       <tr>
-        <td>{{ c.title }}</td>
+        <td>
+          <strong>{{ c.title }}</strong>
+          {% if c.provider %}<div class="small text-muted">Ente: {{ c.provider }}</div>{% endif %}
+        </td>
         <td>{{ c.cert_type }}</td>
         <td>{{ c.expiry_date }}</td>
         <td>
-          <span class="badge {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ st }}</span>
+          <span class="badge badge-status {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+            {% if st == 'expired' %}Scaduto{% elif st == 'expiring' %}In scadenza{% else %}Valido{% endif %}
+          </span>
         </td>
         <td>
-          {% for a in c.attachments %}
-            <a class="btn btn-sm btn-outline-secondary mb-1" href="/attachments/{{ a.id }}">{{ a.original_filename }}</a>
-            {% if current_user.role != 'viewer' %}
-            <form method="post" action="/attachments/{{ a.id }}/delete" class="d-inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button class="btn btn-sm btn-outline-danger mb-1">X</button>
-            </form>
-            {% endif %}
-          {% endfor %}
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            {% for a in c.attachments %}
+              <a class="btn btn-sm btn-outline-secondary" href="/attachments/{{ a.id }}">{{ a.original_filename }}</a>
+              {% if current_user.role != 'viewer' %}
+              <form method="post" action="/attachments/{{ a.id }}/delete" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-sm btn-outline-danger" title="Elimina allegato">X</button>
+              </form>
+              {% endif %}
+            {% endfor %}
+          </div>
           {% if current_user.role != 'viewer' %}
-          <form class="mt-2" method="post" enctype="multipart/form-data" action="/certifications/{{ c.id }}/attachments">
+          <form method="post" enctype="multipart/form-data" action="/certifications/{{ c.id }}/attachments" class="d-flex gap-2 flex-wrap">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input class="form-control form-control-sm" type="file" name="files" multiple required>
-            <button class="btn btn-sm btn-outline-primary mt-1">Upload</button>
+            <button class="btn btn-sm btn-outline-primary">Carica file</button>
           </form>
           {% endif %}
         </td>
@@ -46,6 +61,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="btn btn-sm btn-danger">Elimina</button>
           </form>
+          {% else %}
+          <span class="text-muted small">Sola lettura</span>
           {% endif %}
         </td>
       </tr>
@@ -62,13 +79,33 @@
     <form method="post" action="/employees/{{ employee.id }}/certifications">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="row g-2">
-        <div class="col-md-4"><input class="form-control" name="title" placeholder="Titolo" required></div>
-        <div class="col-md-3"><input class="form-control" name="cert_type" placeholder="Tipo" required></div>
-        <div class="col-md-3"><input class="form-control" name="provider" placeholder="Ente"></div>
-        <div class="col-md-2"><input class="form-control" type="date" name="issued_date"></div>
-        <div class="col-md-2"><input class="form-control" type="date" name="expiry_date" required></div>
-        <div class="col-md-10"><textarea class="form-control" name="notes" placeholder="Note"></textarea></div>
-        <div class="col-md-2"><button class="btn btn-primary w-100">Salva</button></div>
+        <div class="col-md-4">
+          <label class="form-label small text-muted mb-1">Titolo</label>
+          <input class="form-control" name="title" placeholder="Es. Aggiornamento antincendio" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Tipo</label>
+          <input class="form-control" name="cert_type" placeholder="Es. Antincendio" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Ente erogatore</label>
+          <input class="form-control" name="provider" placeholder="Opzionale">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Conseguimento</label>
+          <input class="form-control" type="date" name="issued_date">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Data scadenza</label>
+          <input class="form-control" type="date" name="expiry_date" required>
+        </div>
+        <div class="col-md-7">
+          <label class="form-label small text-muted mb-1">Note</label>
+          <textarea class="form-control" name="notes" rows="2" placeholder="Note interne"></textarea>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-primary w-100">Salva certificazione</button>
+        </div>
       </div>
     </form>
   </div>

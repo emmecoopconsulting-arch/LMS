@@ -1,22 +1,74 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="mb-3">Impostazioni</h2>
-<div class="card">
-  <div class="card-body">
-    <form method="post" action="/admin/settings">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <h5>Factorial API</h5>
-      <div class="mb-2"><label class="form-label">Base URL</label><input class="form-control" name="factorial_base_url" value="{{ data.factorial_base_url }}"></div>
-      <div class="mb-2"><label class="form-label">API Token</label><input class="form-control" name="factorial_api_token" value="{{ data.factorial_api_token }}"></div>
-      <div class="mb-3"><label class="form-label">Company ID (opzionale)</label><input class="form-control" name="factorial_company_id" value="{{ data.factorial_company_id }}"></div>
+<div class="mb-3">
+  <h2 class="page-title mb-1">Impostazioni sistema</h2>
+  <p class="page-subtitle mb-0">Configura integrazione Factorial e regole alert scadenze.</p>
+</div>
 
-      <h5>Alert</h5>
-      <div class="mb-2"><label class="form-label">Soglie giorni (CSV)</label><input class="form-control" name="thresholds_csv" value="{{ rule.thresholds_csv }}"></div>
-      <div class="mb-2"><label class="form-label">Email destinatari extra (CSV)</label><input class="form-control" name="recipient_emails" value="{{ rule.recipient_emails }}"></div>
-      <div class="form-check"><input class="form-check-input" type="checkbox" name="email_enabled" {% if rule.email_enabled %}checked{% endif %}><label class="form-check-label">Email abilitate</label></div>
-      <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="webhook_enabled" {% if rule.webhook_enabled %}checked{% endif %}><label class="form-check-label">Webhook abilitato</label></div>
-      <button class="btn btn-primary">Salva impostazioni</button>
-    </form>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Factorial API</div>
+      <div class="card-body">
+        <form method="post" action="/admin/settings">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="mb-3">
+            <label class="form-label">Base URL</label>
+            <input class="form-control" name="factorial_base_url" value="{{ data.factorial_base_url }}" placeholder="https://api.factorialhr.com">
+            <div class="form-text">L'app usa il path API versione 2026-01-01.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">API Key</label>
+            <input class="form-control" name="factorial_api_token" value="{{ data.factorial_api_token }}" placeholder="x-api-key">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Company ID (opzionale)</label>
+            <input class="form-control" name="factorial_company_id" value="{{ data.factorial_company_id }}">
+          </div>
+
+          <hr>
+          <h6 class="fw-bold">Alert</h6>
+          <div class="mb-3">
+            <label class="form-label">Soglie giorni (CSV)</label>
+            <input class="form-control" name="thresholds_csv" value="{{ rule.thresholds_csv }}" placeholder="90,60,30,14,7,1">
+            <div class="form-text">Formato: numeri separati da virgola.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email destinatari extra (CSV)</label>
+            <input class="form-control" name="recipient_emails" value="{{ rule.recipient_emails }}" placeholder="hr@example.com, rspp@example.com">
+            <div class="form-text">Gli admin ricevono sempre gli alert.</div>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="email_enabled" {% if rule.email_enabled %}checked{% endif %}>
+            <label class="form-check-label">Abilita invio email</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="webhook_enabled" {% if rule.webhook_enabled %}checked{% endif %}>
+            <label class="form-check-label">Abilita webhook</label>
+          </div>
+          <button class="btn btn-primary">Salva impostazioni</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Guida rapida</div>
+      <div class="card-body">
+        <div class="soft-panel mb-2">
+          <strong>1. Configura Factorial</strong>
+          <div class="small text-muted">Imposta Base URL e API Key, salva, poi avvia Sync da pagina Dipendenti.</div>
+        </div>
+        <div class="soft-panel mb-2">
+          <strong>2. Soglie alert</strong>
+          <div class="small text-muted">Le soglie determinano quando inviare notifiche prima della scadenza.</div>
+        </div>
+        <div class="soft-panel">
+          <strong>3. Canali notifica</strong>
+          <div class="small text-muted">Email consigliata come canale principale, webhook opzionale per integrazioni esterne.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

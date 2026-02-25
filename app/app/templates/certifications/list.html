@@ -1,46 +1,72 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="mb-3">Certificazioni</h2>
-<form class="row g-2 mb-3" method="get">
-  <div class="col-md-3">
-    <select class="form-select" name="cert_type">
-      <option value="">Tutti i tipi</option>
-      {% for t in cert_types %}<option value="{{ t }}" {% if filters.cert_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2">
-    <select class="form-select" name="status">
-      <option value="">Tutti gli stati</option>
-      <option value="valid" {% if filters.status=='valid' %}selected{% endif %}>Valido</option>
-      <option value="expiring" {% if filters.status=='expiring' %}selected{% endif %}>In scadenza</option>
-      <option value="expired" {% if filters.status=='expired' %}selected{% endif %}>Scaduto</option>
-    </select>
-  </div>
-  <div class="col-md-3">
-    <select class="form-select" name="location">
-      <option value="">Tutte le sedi</option>
-      {% for l in locations %}<option value="{{ l }}" {% if filters.location==l %}selected{% endif %}>{{ l }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2"><input class="form-control" type="number" name="days" min="0" value="{{ filters.days }}" placeholder="Entro X giorni"></div>
-  <div class="col-md-2"><button class="btn btn-primary w-100">Filtra</button></div>
-</form>
+<div class="mb-3">
+  <h2 class="page-title mb-1">Certificazioni</h2>
+  <p class="page-subtitle mb-0">Vista globale con filtri per tipo, stato, sede e scadenza.</p>
+</div>
 
-<div class="table-responsive">
-<table class="table align-middle">
-<thead><tr><th>Dipendente</th><th>Titolo</th><th>Tipo</th><th>Scadenza</th><th>Stato</th></tr></thead>
-<tbody>
-{% for c in certifications %}
-{% set st = status_for_expiry(c.expiry_date) %}
-<tr>
-  <td><a href="/employees/{{ c.employee.id }}">{{ c.employee.first_name }} {{ c.employee.last_name }}</a></td>
-  <td>{{ c.title }}</td>
-  <td>{{ c.cert_type }}</td>
-  <td>{{ c.expiry_date }}</td>
-  <td><span class="badge {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ st }}</span></td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2" method="get">
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1">Tipo certificato</label>
+        <select class="form-select" name="cert_type">
+          <option value="">Tutti i tipi</option>
+          {% for t in cert_types %}<option value="{{ t }}" {% if filters.cert_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Stato</label>
+        <select class="form-select" name="status">
+          <option value="">Tutti</option>
+          <option value="valid" {% if filters.status=='valid' %}selected{% endif %}>Valido</option>
+          <option value="expiring" {% if filters.status=='expiring' %}selected{% endif %}>In scadenza</option>
+          <option value="expired" {% if filters.status=='expired' %}selected{% endif %}>Scaduto</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1">Sede</label>
+        <select class="form-select" name="location">
+          <option value="">Tutte</option>
+          {% for l in locations %}<option value="{{ l }}" {% if filters.location==l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Scade entro giorni</label>
+        <input class="form-control" type="number" name="days" min="0" value="{{ filters.days }}" placeholder="Es. 30">
+      </div>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button class="btn btn-primary w-100">Applica</button>
+        <a class="btn btn-light border" href="/certifications">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Dipendente</th><th>Certificazione</th><th>Tipo</th><th>Scadenza</th><th>Stato</th></tr></thead>
+      <tbody>
+      {% if certifications|length == 0 %}
+      <tr><td colspan="5" class="text-center text-muted py-3">Nessuna certificazione trovata con i filtri attuali.</td></tr>
+      {% endif %}
+      {% for c in certifications %}
+      {% set st = status_for_expiry(c.expiry_date) %}
+      <tr>
+        <td><a href="/employees/{{ c.employee.id }}"><strong>{{ c.employee.first_name }} {{ c.employee.last_name }}</strong></a></td>
+        <td>{{ c.title }}</td>
+        <td>{{ c.cert_type }}</td>
+        <td>{{ c.expiry_date }}</td>
+        <td>
+          <span class="badge badge-status {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+            {% if st == 'expired' %}Scaduto{% elif st == 'expiring' %}In scadenza{% else %}Valido{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

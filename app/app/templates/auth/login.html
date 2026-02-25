@@ -1,16 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h4 class="mb-3">Login</h4>
+  <div class="col-lg-5 col-md-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <h4 class="page-title mb-1">Accesso piattaforma</h4>
+        <p class="page-subtitle mb-3">Gestione certificati formazione dipendenti.</p>
         {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
         <form method="post" action="/login">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input class="form-control" name="email" type="email" required>
+            <input class="form-control" name="email" type="email" required autofocus>
           </div>
           <div class="mb-3">
             <label class="form-label">Password</label>
@@ -18,7 +19,10 @@
           </div>
           <button class="btn btn-primary w-100">Accedi</button>
         </form>
-        <small class="text-muted d-block mt-3">Default admin: admin@example.local / admin1234</small>
+        <div class="soft-panel mt-3 small">
+          <strong>Primo accesso (test):</strong><br>
+          admin@example.local / admin1234
+        </div>
       </div>
     </div>
   </div>

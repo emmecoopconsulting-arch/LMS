@@ -4,35 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title or 'Traccia Formazione' }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="/static/css/app.css" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">Traccia Formazione</a>
+<nav class="navbar navbar-expand-lg app-navbar mb-4">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold" href="/">Traccia Formazione</a>
     {% if current_user %}
-    <div class="navbar-nav me-auto">
-      <a class="nav-link" href="/">Dashboard</a>
-      <a class="nav-link" href="/employees">Dipendenti</a>
-      <a class="nav-link" href="/certifications">Certificazioni</a>
-      {% if current_user.role == 'admin' %}
-      <a class="nav-link" href="/admin/settings">Impostazioni</a>
-      <a class="nav-link" href="/admin/users">Utenti</a>
-      {% endif %}
-    </div>
-    <div class="d-flex text-white align-items-center gap-2">
-      <span>{{ current_user.full_name }} ({{ current_user.role }})</span>
-      <form method="post" action="/logout">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="btn btn-outline-light btn-sm">Logout</button>
-      </form>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <div class="navbar-nav me-auto">
+        <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">Dashboard</a>
+        <a class="nav-link {% if request.url.path.startswith('/employees') %}active{% endif %}" href="/employees">Dipendenti</a>
+        <a class="nav-link {% if request.url.path.startswith('/certifications') %}active{% endif %}" href="/certifications">Certificazioni</a>
+        {% if current_user.role == 'admin' %}
+        <a class="nav-link {% if request.url.path.startswith('/admin/settings') %}active{% endif %}" href="/admin/settings">Impostazioni</a>
+        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}" href="/admin/users">Utenti</a>
+        {% endif %}
+      </div>
+      <div class="d-flex align-items-center gap-2 user-chip-wrap">
+        <span class="user-chip">{{ current_user.full_name }} · {{ current_user.role }}</span>
+        <form method="post" action="/logout" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-outline-light btn-sm">Logout</button>
+        </form>
+      </div>
     </div>
     {% endif %}
   </div>
 </nav>
+
 <div class="container pb-5">
   {% block content %}{% endblock %}
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

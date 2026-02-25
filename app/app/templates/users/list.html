@@ -1,19 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="mb-3">Utenti</h2>
+<div class="mb-3">
+  <h2 class="page-title mb-1">Utenti e ruoli</h2>
+  <p class="page-subtitle mb-0">Gestione account locali e permessi applicativi.</p>
+</div>
+
 <div class="card mb-3">
+  <div class="card-header">Crea nuovo utente</div>
   <div class="card-body">
     <form method="post" action="/admin/users">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="row g-2">
-        <div class="col-md-3"><input class="form-control" name="full_name" placeholder="Nome completo" required></div>
+        <div class="col-md-3"><input class="form-control" name="full_name" placeholder="Nome e cognome" required></div>
         <div class="col-md-3"><input class="form-control" type="email" name="email" placeholder="Email" required></div>
         <div class="col-md-2"><input class="form-control" type="password" name="password" placeholder="Password" required></div>
         <div class="col-md-2">
           <select class="form-select" name="role">
-            <option value="viewer">viewer</option>
-            <option value="manager">manager</option>
-            <option value="admin">admin</option>
+            <option value="viewer">viewer (sola lettura)</option>
+            <option value="manager">manager (operativo)</option>
+            <option value="admin">admin (completo)</option>
           </select>
         </div>
         <div class="col-md-2"><button class="btn btn-primary w-100">Crea utente</button></div>
@@ -22,17 +27,24 @@
   </div>
 </div>
 
-<table class="table">
-  <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th></tr></thead>
-  <tbody>
-    {% for u in users %}
-    <tr>
-      <td>{{ u.full_name }}</td>
-      <td>{{ u.email }}</td>
-      <td>{{ u.role }}</td>
-      <td>{% if u.is_active %}Attivo{% else %}Inattivo{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th></tr></thead>
+      <tbody>
+        {% if users|length == 0 %}
+        <tr><td colspan="4" class="text-center text-muted py-3">Nessun utente presente.</td></tr>
+        {% endif %}
+        {% for u in users %}
+        <tr>
+          <td>{{ u.full_name }}</td>
+          <td>{{ u.email }}</td>
+          <td><span class="badge text-bg-light border">{{ u.role }}</span></td>
+          <td>{% if u.is_active %}<span class="badge bg-success badge-status">Attivo</span>{% else %}<span class="badge bg-secondary badge-status">Inattivo</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
