@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="mb-4">Dashboard</h2>
+<div class="row g-3 mb-4">
+  <div class="col-md-6"><div class="card border-danger"><div class="card-body"><h5>Scaduti</h5><p class="display-6 text-danger">{{ expired }}</p></div></div></div>
+  <div class="col-md-6"><div class="card border-warning"><div class="card-body"><h5>In scadenza (30gg)</h5><p class="display-6 text-warning">{{ expiring }}</p></div></div></div>
+</div>
+
+{% for days, items in upcoming %}
+<div class="card mb-3">
+  <div class="card-header">In scadenza nei prossimi {{ days }} giorni</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Dipendente</th><th>Titolo</th><th>Tipo</th><th>Scadenza</th><th>Stato</th></tr></thead>
+      <tbody>
+        {% for c in items %}
+        {% set st = status_for_expiry(c.expiry_date) %}
+        <tr>
+          <td><a href="/employees/{{ c.employee.id }}">{{ c.employee.first_name }} {{ c.employee.last_name }}</a></td>
+          <td>{{ c.title }}</td>
+          <td>{{ c.cert_type }}</td>
+          <td>{{ c.expiry_date }}</td>
+          <td>
+            <span class="badge {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+              {{ st }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

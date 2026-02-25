@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <div>
+    <h2>{{ employee.first_name }} {{ employee.last_name }}</h2>
+    <p class="text-muted mb-0">Sede: {{ employee.location or '-' }} | Stato: {% if employee.is_active %}Attivo{% else %}Inattivo{% endif %}</p>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">Certificazioni</div>
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Titolo</th><th>Tipo</th><th>Scadenza</th><th>Stato</th><th>Allegati</th><th></th></tr></thead>
+      <tbody>
+      {% for c in certifications %}
+      {% set st = status_for_expiry(c.expiry_date) %}
+      <tr>
+        <td>{{ c.title }}</td>
+        <td>{{ c.cert_type }}</td>
+        <td>{{ c.expiry_date }}</td>
+        <td>
+          <span class="badge {% if st=='expired' %}bg-danger{% elif st=='expiring' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ st }}</span>
+        </td>
+        <td>
+          {% for a in c.attachments %}
+            <a class="btn btn-sm btn-outline-secondary mb-1" href="/attachments/{{ a.id }}">{{ a.original_filename }}</a>
+            {% if current_user.role != 'viewer' %}
+            <form method="post" action="/attachments/{{ a.id }}/delete" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-danger mb-1">X</button>
+            </form>
+            {% endif %}
+          {% endfor %}
+          {% if current_user.role != 'viewer' %}
+          <form class="mt-2" method="post" enctype="multipart/form-data" action="/certifications/{{ c.id }}/attachments">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input class="form-control form-control-sm" type="file" name="files" multiple required>
+            <button class="btn btn-sm btn-outline-primary mt-1">Upload</button>
+          </form>
+          {% endif %}
+        </td>
+        <td>
+          {% if current_user.role != 'viewer' %}
+          <form method="post" action="/certifications/{{ c.id }}/delete" onsubmit="return confirm('Eliminare certificazione?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-danger">Elimina</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if current_user.role != 'viewer' %}
+<div class="card">
+  <div class="card-header">Aggiungi certificazione</div>
+  <div class="card-body">
+    <form method="post" action="/employees/{{ employee.id }}/certifications">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="row g-2">
+        <div class="col-md-4"><input class="form-control" name="title" placeholder="Titolo" required></div>
+        <div class="col-md-3"><input class="form-control" name="cert_type" placeholder="Tipo" required></div>
+        <div class="col-md-3"><input class="form-control" name="provider" placeholder="Ente"></div>
+        <div class="col-md-2"><input class="form-control" type="date" name="issued_date"></div>
+        <div class="col-md-2"><input class="form-control" type="date" name="expiry_date" required></div>
+        <div class="col-md-10"><textarea class="form-control" name="notes" placeholder="Note"></textarea></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Salva</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

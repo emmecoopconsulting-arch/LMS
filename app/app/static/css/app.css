@@ -1,0 +1,8 @@
+body {
+  background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
+}
+
+.card {
+  border: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}

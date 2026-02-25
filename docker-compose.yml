@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16.8-alpine
+    container_name: traccia-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-traccia_formazione}
+      POSTGRES_USER: ${POSTGRES_USER:-traccia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-traccia}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-traccia} -d ${POSTGRES_DB:-traccia_formazione}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: traccia-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-traccia}:${POSTGRES_PASSWORD:-traccia}@db:5432/${POSTGRES_DB:-traccia_formazione}
+      PORT: ${PORT:-8080}
+      HOST: 0.0.0.0
+      UPLOAD_DIR: /data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - attachments_data:/data/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
+  attachments_data:
