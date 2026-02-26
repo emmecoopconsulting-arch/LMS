@@ -6,7 +6,17 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.session import get_db, SessionLocal
-from app.models import User, Employee, Certification, Attachment, AlertSetting
+from app.models import (
+    User,
+    Employee,
+    Certification,
+    Attachment,
+    AlertSetting,
+    Course,
+    EmployeeCourse,
+    EmployeeCourseUpdate,
+    CourseUpdateAttachment,
+)
 from app.core.security import verify_password, hash_password
 from app.core.csrf import ensure_csrf_token, validate_csrf
 from app.core.rate_limit import LoginRateLimiter
@@ -41,6 +51,12 @@ def _render(request: Request, template: str, context: dict):
             db.close()
     base.update(context)
     return templates.TemplateResponse(template, base)
+
+
+def _compute_next_refresh_due(base_date: date | None, interval_days: int | None) -> date | None:
+    if not base_date or not interval_days or interval_days <= 0:
+        return None
+    return base_date + timedelta(days=interval_days)
 
 
 @router.get("/login")
@@ -145,6 +161,62 @@ def employee_list(
     )
 
 
+@router.get("/courses")
+def courses_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    courses = db.query(Course).order_by(Course.title.asc()).all()
+    return _render(request, "courses/list.html", {"courses": courses})
+
+
+@router.post("/courses")
+def create_course(
+    request: Request,
+    title: str = Form(...),
+    description: str = Form(""),
+    provider: str = Form(""),
+    requires_refresh: str = Form("off"),
+    refresh_interval_days: str = Form(""),
+    is_active: str = Form("on"),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("manager")),
+):
+    validate_csrf(request, csrf_token)
+    normalized_title = title.strip()
+    if not normalized_title:
+        return RedirectResponse("/courses", status_code=303)
+
+    refresh_enabled = requires_refresh == "on"
+    interval_days = None
+    if refresh_enabled and refresh_interval_days:
+        try:
+            interval_days = int(refresh_interval_days)
+        except ValueError:
+            return RedirectResponse("/courses", status_code=303)
+    if refresh_enabled and (not interval_days or interval_days <= 0):
+        return RedirectResponse("/courses", status_code=303)
+
+    exists = db.query(Course).filter(func.lower(Course.title) == normalized_title.lower()).first()
+    if exists:
+        return RedirectResponse("/courses", status_code=303)
+
+    course = Course(
+        title=normalized_title,
+        description=description or None,
+        provider=provider or None,
+        requires_refresh=refresh_enabled,
+        refresh_interval_days=interval_days if refresh_enabled else None,
+        is_active=is_active == "on",
+    )
+    db.add(course)
+    db.commit()
+    write_audit(db, user.id, "create", "course", str(course.id), {})
+    return RedirectResponse("/courses", status_code=303)
+
+
 @router.get("/employees/{employee_id}")
 def employee_detail(
     employee_id: int,
@@ -161,10 +233,28 @@ def employee_detail(
         .order_by(Certification.expiry_date.asc())
         .all()
     )
+    employee_courses = (
+        db.query(EmployeeCourse)
+        .filter_by(employee_id=employee.id)
+        .order_by(EmployeeCourse.created_at.desc())
+        .all()
+    )
+    assigned_course_ids = {row.course_id for row in employee_courses}
+    available_courses_query = db.query(Course).filter(Course.is_active.is_(True))
+    if assigned_course_ids:
+        available_courses_query = available_courses_query.filter(Course.id.notin_(assigned_course_ids))
+    available_courses = available_courses_query.order_by(Course.title.asc()).all()
     return _render(
         request,
         "employees/detail.html",
-        {"employee": employee, "certifications": certs, "status_for_expiry": status_for_expiry},
+        {
+            "employee": employee,
+            "certifications": certs,
+            "employee_courses": employee_courses,
+            "available_courses": available_courses,
+            "today": date.today(),
+            "status_for_expiry": status_for_expiry,
+        },
     )
 
 
@@ -197,6 +287,49 @@ def create_certification_web(
     db.add(cert)
     db.commit()
     write_audit(db, user.id, "create", "certification", str(cert.id), {"employee_id": employee_id})
+    return RedirectResponse(f"/employees/{employee_id}", status_code=303)
+
+
+@router.post("/employees/{employee_id}/courses")
+def assign_course_to_employee(
+    employee_id: int,
+    request: Request,
+    course_id: int = Form(...),
+    completed_date: str = Form(""),
+    notes: str = Form(""),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("manager")),
+):
+    validate_csrf(request, csrf_token)
+    employee = db.get(Employee, employee_id)
+    if not employee:
+        raise HTTPException(status_code=404)
+
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404)
+
+    already_assigned = (
+        db.query(EmployeeCourse).filter_by(employee_id=employee_id, course_id=course_id).first()
+    )
+    if already_assigned:
+        return RedirectResponse(f"/employees/{employee_id}", status_code=303)
+
+    completed = date.fromisoformat(completed_date) if completed_date else None
+    next_due = _compute_next_refresh_due(completed, course.refresh_interval_days) if course.requires_refresh else None
+    row = EmployeeCourse(
+        employee_id=employee_id,
+        course_id=course_id,
+        completed_date=completed,
+        next_refresh_due_date=next_due,
+        notes=notes or None,
+        created_by=user.id,
+        updated_by=user.id,
+    )
+    db.add(row)
+    db.commit()
+    write_audit(db, user.id, "create", "employee_course", str(row.id), {"employee_id": employee_id, "course_id": course_id})
     return RedirectResponse(f"/employees/{employee_id}", status_code=303)
 
 
@@ -281,6 +414,94 @@ def delete_certification_web(
     return RedirectResponse(f"/employees/{employee_id}", status_code=303)
 
 
+@router.post("/employee-courses/{employee_course_id}/delete")
+def delete_employee_course(
+    employee_course_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("manager")),
+):
+    validate_csrf(request, csrf_token)
+    employee_course = db.get(EmployeeCourse, employee_course_id)
+    if not employee_course:
+        raise HTTPException(status_code=404)
+    employee_id = employee_course.employee_id
+    db.delete(employee_course)
+    db.commit()
+    write_audit(db, user.id, "delete", "employee_course", str(employee_course_id), {"employee_id": employee_id})
+    return RedirectResponse(f"/employees/{employee_id}", status_code=303)
+
+
+@router.post("/employee-courses/{employee_course_id}/updates")
+def create_employee_course_update(
+    employee_course_id: int,
+    request: Request,
+    update_date: str = Form(...),
+    next_refresh_due_date: str = Form(""),
+    notes: str = Form(""),
+    files: list[UploadFile] = File(default=[]),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("manager")),
+):
+    validate_csrf(request, csrf_token)
+    employee_course = db.get(EmployeeCourse, employee_course_id)
+    if not employee_course:
+        raise HTTPException(status_code=404)
+    if not employee_course.course.requires_refresh:
+        raise HTTPException(status_code=400, detail="Course does not require refresh updates")
+
+    refresh_date = date.fromisoformat(update_date)
+    due_date = (
+        date.fromisoformat(next_refresh_due_date)
+        if next_refresh_due_date
+        else _compute_next_refresh_due(refresh_date, employee_course.course.refresh_interval_days)
+    )
+
+    row = EmployeeCourseUpdate(
+        employee_course_id=employee_course_id,
+        update_date=refresh_date,
+        next_refresh_due_date=due_date,
+        notes=notes or None,
+        created_by=user.id,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    employee_course.next_refresh_due_date = due_date
+    employee_course.updated_by = user.id
+    db.commit()
+
+    for item in files:
+        if not item.filename:
+            continue
+        path, size, checksum = store_upload(item)
+        att = CourseUpdateAttachment(
+            course_update_id=row.id,
+            original_filename=item.filename,
+            stored_path=path,
+            mime_type=item.content_type or "application/octet-stream",
+            file_size=size,
+            checksum_sha256=checksum,
+            uploaded_by=user.id,
+        )
+        db.add(att)
+        db.commit()
+        write_audit(db, user.id, "create", "course_update_attachment", str(att.id), {"course_update_id": row.id})
+
+    write_audit(
+        db,
+        user.id,
+        "create",
+        "employee_course_update",
+        str(row.id),
+        {"employee_id": employee_course.employee_id, "employee_course_id": employee_course_id},
+    )
+    return RedirectResponse(f"/employees/{employee_course.employee_id}", status_code=303)
+
+
 @router.get("/attachments/{attachment_id}")
 def download_attachment(
     attachment_id: int,
@@ -288,6 +509,21 @@ def download_attachment(
     _: User = Depends(get_current_user),
 ):
     att = db.get(Attachment, attachment_id)
+    if not att:
+        raise HTTPException(status_code=404)
+    path = Path(att.stored_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File missing")
+    return FileResponse(path=path, filename=att.original_filename, media_type=att.mime_type)
+
+
+@router.get("/course-updates/attachments/{attachment_id}")
+def download_course_update_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    att = db.get(CourseUpdateAttachment, attachment_id)
     if not att:
         raise HTTPException(status_code=404)
     path = Path(att.stored_path)
@@ -321,6 +557,35 @@ def delete_attachment_web(
         "attachment",
         str(attachment_id),
         {"certification_id": att.certification_id},
+    )
+    return RedirectResponse(f"/employees/{employee_id}", status_code=303)
+
+
+@router.post("/course-updates/attachments/{attachment_id}/delete")
+def delete_course_update_attachment_web(
+    attachment_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("manager")),
+):
+    validate_csrf(request, csrf_token)
+    att = db.get(CourseUpdateAttachment, attachment_id)
+    if not att:
+        raise HTTPException(status_code=404)
+    employee_id = att.course_update.employee_course.employee_id
+    file_path = Path(att.stored_path)
+    if file_path.exists():
+        file_path.unlink()
+    db.delete(att)
+    db.commit()
+    write_audit(
+        db,
+        user.id,
+        "delete",
+        "course_update_attachment",
+        str(attachment_id),
+        {"course_update_id": att.course_update_id},
     )
     return RedirectResponse(f"/employees/{employee_id}", status_code=303)
 

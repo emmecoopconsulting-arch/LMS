@@ -22,6 +22,7 @@
       <div class="navbar-nav me-auto">
         <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">Dashboard</a>
         <a class="nav-link {% if request.url.path.startswith('/employees') %}active{% endif %}" href="/employees">Dipendenti</a>
+        <a class="nav-link {% if request.url.path.startswith('/courses') %}active{% endif %}" href="/courses">Corsi</a>
         <a class="nav-link {% if request.url.path.startswith('/certifications') %}active{% endif %}" href="/certifications">Certificazioni</a>
         {% if current_user.role == 'admin' %}
         <a class="nav-link {% if request.url.path.startswith('/admin/settings') %}active{% endif %}" href="/admin/settings">Impostazioni</a>

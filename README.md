@@ -14,6 +14,8 @@ Mini web app self-hosted per gestione certificati e scadenze formazione dipenden
 
 - Sync dipendenti da Factorial (`Sync now` + scheduler notturno)
 - Gestione certificazioni per dipendente
+- Catalogo corsi (`one time` o con aggiornamenti periodici)
+- Assegnazione corsi ai dipendenti con storico aggiornamenti e certificati allegati
 - Upload multi-file allegati (`PDF/JPG/PNG`) con metadati e checksum
 - Dashboard scadenze (30/60/90 giorni)
 - Alert configurabili a soglia (90/60/30/14/7/1) con anti-spam (`certificato+soglia`)

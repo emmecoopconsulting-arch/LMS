@@ -43,6 +43,7 @@ class Employee(Base):
     )
 
     certifications = relationship("Certification", back_populates="employee")
+    employee_courses = relationship("EmployeeCourse", back_populates="employee", cascade="all, delete-orphan")
 
 
 class Certification(Base):
@@ -69,6 +70,68 @@ class Certification(Base):
     attachments = relationship("Attachment", back_populates="certification", cascade="all, delete-orphan")
 
 
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), unique=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provider: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    requires_refresh: Mapped[bool] = mapped_column(Boolean, default=False)
+    refresh_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    employee_courses = relationship("EmployeeCourse", back_populates="course", cascade="all, delete-orphan")
+
+
+class EmployeeCourse(Base):
+    __tablename__ = "employee_courses"
+    __table_args__ = (UniqueConstraint("employee_id", "course_id", name="uq_employee_course"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id", ondelete="CASCADE"), index=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    completed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    next_refresh_due_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
+
+    employee = relationship("Employee", back_populates="employee_courses")
+    course = relationship("Course", back_populates="employee_courses")
+    updates = relationship("EmployeeCourseUpdate", back_populates="employee_course", cascade="all, delete-orphan")
+
+
+class EmployeeCourseUpdate(Base):
+    __tablename__ = "employee_course_updates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    employee_course_id: Mapped[int] = mapped_column(
+        ForeignKey("employee_courses.id", ondelete="CASCADE"), index=True
+    )
+    update_date: Mapped[date] = mapped_column(Date, index=True)
+    next_refresh_due_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    employee_course = relationship("EmployeeCourse", back_populates="updates")
+    attachments = relationship(
+        "CourseUpdateAttachment", back_populates="course_update", cascade="all, delete-orphan"
+    )
+
+
 class Attachment(Base):
     __tablename__ = "attachments"
 
@@ -85,6 +148,26 @@ class Attachment(Base):
     uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     certification = relationship("Certification", back_populates="attachments")
+
+
+class CourseUpdateAttachment(Base):
+    __tablename__ = "course_update_attachments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_update_id: Mapped[int] = mapped_column(
+        ForeignKey("employee_course_updates.id", ondelete="CASCADE"), index=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(255))
+    stored_path: Mapped[str] = mapped_column(String(500), unique=True)
+    mime_type: Mapped[str] = mapped_column(String(120))
+    file_size: Mapped[int] = mapped_column(Integer)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    course_update = relationship("EmployeeCourseUpdate", back_populates="attachments")
 
 
 class AlertSetting(Base):

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-3">
+  <h2 class="page-title mb-1">Corsi</h2>
+  <p class="page-subtitle mb-0">Catalogo corsi aziendali con logica one-time o aggiornamento periodico.</p>
+</div>
+
+<div class="card mb-4">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Titolo</th><th>Ente</th><th>Modalita</th><th>Cadenza aggiornamento</th><th>Stato</th></tr></thead>
+      <tbody>
+      {% if courses|length == 0 %}
+      <tr><td colspan="5" class="text-center text-muted py-3">Nessun corso configurato.</td></tr>
+      {% endif %}
+      {% for c in courses %}
+      <tr>
+        <td>
+          <strong>{{ c.title }}</strong>
+          {% if c.description %}<div class="small text-muted">{{ c.description }}</div>{% endif %}
+        </td>
+        <td>{{ c.provider or '-' }}</td>
+        <td>{% if c.requires_refresh %}Con aggiornamento{% else %}One time{% endif %}</td>
+        <td>{% if c.requires_refresh %}Ogni {{ c.refresh_interval_days }} giorni{% else %}-{% endif %}</td>
+        <td>{% if c.is_active %}<span class="badge bg-success badge-status">Attivo</span>{% else %}<span class="badge bg-secondary badge-status">Disattivo</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if current_user.role != 'viewer' %}
+<div class="card">
+  <div class="card-header">Crea nuovo corso</div>
+  <div class="card-body">
+    <form method="post" action="/courses">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small text-muted mb-1">Titolo</label>
+          <input class="form-control" name="title" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Ente erogatore</label>
+          <input class="form-control" name="provider" placeholder="Opzionale">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="requires_refresh" name="requires_refresh">
+            <label class="form-check-label" for="requires_refresh">Richiede aggiornamenti</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small text-muted mb-1">Ogni giorni</label>
+          <input class="form-control" type="number" min="1" name="refresh_interval_days" placeholder="Es. 365">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+            <label class="form-check-label" for="is_active">Attivo</label>
+          </div>
+        </div>
+        <div class="col-md-9">
+          <label class="form-label small text-muted mb-1">Descrizione</label>
+          <textarea class="form-control" name="description" rows="2" placeholder="Opzionale"></textarea>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button class="btn btn-primary w-100">Salva corso</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
